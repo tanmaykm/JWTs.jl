@@ -1,4 +1,4 @@
-module JSONWebTokens
+module JWTs
 
 using MbedTLS
 using JSON
@@ -207,4 +207,4 @@ function padb64(bs)
     bs
 end
 
-end # module JSONWebTokens
+end # module JWTs

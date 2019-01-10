@@ -1,8 +1,8 @@
-# JSONWebTokens
+# JWTs
 
-[![Build Status](https://travis-ci.org/tanmaykm/JSONWebTokens.jl.svg?branch=master)](https://travis-ci.org/tanmaykm/JSONWebTokens.jl)
-[![Coverage Status](https://coveralls.io/repos/tanmaykm/JSONWebTokens.jl/badge.svg?branch=master)](https://coveralls.io/r/tanmaykm/JSONWebTokens.jl?branch=master)
-[![codecov.io](http://codecov.io/github/tanmaykm/JSONWebTokens.jl/coverage.svg?branch=master)](http://codecov.io/github/tanmaykm/JSONWebTokens.jl?branch=master)
+[![Build Status](https://travis-ci.org/tanmaykm/JWTs.jl.svg?branch=master)](https://travis-ci.org/tanmaykm/JWTs.jl)
+[![Coverage Status](https://coveralls.io/repos/tanmaykm/JWTs.jl/badge.svg?branch=master)](https://coveralls.io/r/tanmaykm/JWTs.jl?branch=master)
+[![codecov.io](http://codecov.io/github/tanmaykm/JWTs.jl/coverage.svg?branch=master)](http://codecov.io/github/tanmaykm/JWTs.jl?branch=master)
 
 JSON Web Tokens (JWT) are an open, industry standard [RFC 7519](https://tools.ietf.org/html/rfc7519) method for representing and transferring claims securely between two parties.
 
@@ -15,7 +15,7 @@ JSON Web Tokens (JWT) are an open, industry standard [RFC 7519](https://tools.ie
 To create or verify JWT, using a JWKSet is preferred as it provides mechanism of dealing with key rotation. To refresh a JWKSet, or to load keys for the first time, call the `refresh!` method on it.
 
 ```julia
-julia> using JSONWebTokens
+julia> using JWTs
 
 julia> keyset = JWKSet("https://www.googleapis.com/oauth2/v3/certs")
 JWKSet 0 keys (https://www.googleapis.com/oauth2/v3/certs)
@@ -39,7 +39,7 @@ julia> for (k,v) in keyset.keys
 ```julia
 julia> using JSON
 
-julia> using JSONWebTokens
+julia> using JWTs
 
 julia> payload = JSON.parse("""{
            "iss": "https://auth2.juliacomputing.io/dex",

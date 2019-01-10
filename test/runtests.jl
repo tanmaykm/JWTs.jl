@@ -1,4 +1,4 @@
-using JSONWebTokens
+using JWTs
 using Test
 using JSON
 
