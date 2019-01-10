@@ -1,14 +1,31 @@
 using JSONWebTokens
+using Test
+using JSON
 
-function test_all()
-    keyset = JWKSet("https://auth2.juliacomputing.io/dex/keys")
+function print_header(msg)
+    println("")
+    println("-"^60)
+    println(msg)
+    println("-"^60)
+end
+
+function test_and_get_keyset(url)
+    print_header("keyset: $url")
+
+    keyset = JWKSet(url)
     @test length(keyset.keys) == 0
+
     refresh!(keyset)
-    println("keyset: ", keyset)
     @test length(keyset.keys) > 0
     for (k,v) in keyset.keys
-        println(k, " => ", v.key)
+        println("    ", k, " => ", v.key)
     end
+
+    keyset
+end
+
+function test_signing(keyset_url)
+    keyset = test_and_get_keyset(keyset_url)
 
     data = [
         JSON.parse("""{
@@ -45,14 +62,8 @@ function test_all()
             "name": "Example User"
         }""")
     ]
-    keyset = JWKSet("file://" * joinpath(@__DIR__, "jwkkey.json"))
-    @test length(keyset.keys) == 0
-    refresh!(keyset)
-    @test length(keyset.keys) == 2
-    println("keyset: ", keyset)
-    for (k,v) in keyset.keys
-        println(k, " => ", v.key)
-    end
+
+    print_header("signing")
     for k in keys(keyset.keys)
         for d in data
             jwt = JWT(; payload=d)
@@ -62,7 +73,7 @@ function test_all()
             @test isvalid(jwt)
             @test isverified(jwt)
 
-            println("JWT: ", jwt)
+            println("    JWT: ", jwt)
             jwt2 = JWT(; jwt=string(jwt))
             @test issigned(jwt2)
             @test !isverified(jwt2)
@@ -85,4 +96,5 @@ function test_all()
     end
 end
 
-test_all()
+test_and_get_keyset("https://www.googleapis.com/oauth2/v3/certs")
+test_signing("file://" * joinpath(@__DIR__, "jwkkey.json"))

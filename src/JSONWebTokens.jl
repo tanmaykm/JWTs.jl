@@ -7,7 +7,7 @@ using HTTP
 using Random
 
 import Base: show, isvalid
-export JWT, JWK, JWKRSA, JWKSymmetric, JWKSet, issigned, isverified, isvalid, validate!, sign!, show, claims, refresh!
+export JWT, JWK, JWKRSA, JWKSymmetric, JWKSet, issigned, isverified, isvalid, validate!, sign!, show, claims, refresh!, kid
 
 struct JWKSymmetric
     kind::MbedTLS.MDKind
@@ -22,13 +22,13 @@ end
 """
 JWK represents a JWK Key (either for signing or verification).
 
-JWK can be either a JWKRSA or JWKSymmetric. In case of RSA keys,
-it can represent either the public or private key
+JWK can be either a JWKRSA or JWKSymmetric. A RSA key can 
+represent either the public or private key.
 """
 const JWK = Union{JWKRSA,JWKSymmetric}
 
 """
-JWKSet holds a set of keys, fetched from a open id key URL, each key identified by a key id.
+JWKSet holds a set of keys, fetched from a OpenId key URL, each key identified by a key id.
 
 The key URL can either be of `http(s)://` or `file://` type.
 """

@@ -1,0 +1,18 @@
+{
+    "keys": [
+        {
+            "kid":"4Fytp3LfBhriD0eZ-k3aNS042bDiCZXg6bQNJmYoaE",
+            "kty":"oct",
+            "alg":"HS256",
+            "use":"sig",
+            "k":"dGhlcXVpY2ticm93bmZveGp1bXBlZG92ZXJ0aGVsYXo"
+        },
+        {
+            "kid":"5fYTP3lFbHRId0Ez-K3Ans042BdIczxG6BqnjMyOAe",
+            "kty":"oct",
+            "alg":"HS256",
+            "use":"sig",
+            "k":"cXVpY2ticm93bmZveGp1bXBlZG92ZXJ0aGVsYXp5ZG8"
+        }
+    ]
+}
