@@ -91,7 +91,7 @@ function validate!(jwt::JWT, keyset::JWKSet, kid::String)
     validate!(jwt, keyset.keys[kid])
 end
 function validate!(jwt::JWT, key::T) where {T <: JWK}
-    isverified(jwt) && return
+    isverified(jwt) && (return isvalid(jwt))
     @assert issigned(jwt)
 
     data = jwt.header * "." * jwt.payload
