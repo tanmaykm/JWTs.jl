@@ -2,7 +2,6 @@
 
 [![Build Status](https://travis-ci.org/tanmaykm/JWTs.jl.svg?branch=master)](https://travis-ci.org/tanmaykm/JWTs.jl)
 [![Coverage Status](https://coveralls.io/repos/tanmaykm/JWTs.jl/badge.svg?branch=master)](https://coveralls.io/r/tanmaykm/JWTs.jl?branch=master)
-[![codecov.io](http://codecov.io/github/tanmaykm/JWTs.jl/coverage.svg?branch=master)](http://codecov.io/github/tanmaykm/JWTs.jl?branch=master)
 
 JSON Web Tokens (JWT) are an open, industry standard [RFC 7519](https://tools.ietf.org/html/rfc7519) method for representing and transferring claims securely between two parties.
 
