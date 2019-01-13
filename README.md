@@ -101,7 +101,3 @@ true
 julia> isvalid(jwt)
 true
 ```
-
-## TODO
-
-Support more key algorithms. Right now it only supports RS256 and HS256.

@@ -109,6 +109,27 @@ end
 function sign!(jwt::JWT, key::T, kid::String="") where {T <: JWK}
     issigned(jwt) && return
 
+    if T <: JWKRSA
+        if key.kind === MbedTLS.MD_SHA256
+            alg = "RS256"
+        elseif key.kind === MbedTLS.MD_SHA384
+            alg = "RS384"
+        elseif key.kind === MbedTLS.MD_SHA512
+            alg = "RS512"
+        else
+            error("unsupported key algorithm")
+        end
+    else
+        if key.kind === MbedTLS.MD_SHA256
+            alg = "HS256"
+        elseif key.kind === MbedTLS.MD_SHA384
+            alg = "HS384"
+        elseif key.kind === MbedTLS.MD_SHA512
+            alg = "HS512"
+        else
+            error("unsupported key algorithm")
+        end
+    end
     alg = (T <: JWKRSA) ? "RS256" : "HS256"
     header_dict = Dict{String,String}("alg"=>alg, "typ"=>"JWT")
     isempty(kid) || (header_dict["kid"] = kid)
@@ -147,42 +168,48 @@ function refresh!(keyseturl::String, keysetdict::Dict{String,JWK})
         alg = key["alg"]
 
         # ref: https://tools.ietf.org/html/rfc7518
-        if kty == "RSA"
-            if alg == "RS256"
-                try
-                    n = urldec(key["n"])
-                    e = urldec(key["e"])
-                    keysetdict[kid] = JWKRSA(MbedTLS.MD_SHA256, pubkey(n, e))
-                catch ex
-                    @warn("exception $ex trying to decode, skipping key $kid")
+        try
+            if kty == "RSA"
+                n = base64decode(urldec(key["n"]))
+                e = base64decode(urldec(key["e"]))
+                if alg == "RS256"
+                    keysetdict[kid] = JWKRSA(MbedTLS.MD_SHA256, pubkey(n, e, MbedTLS.MD_SHA256))
+                elseif alg == "RS384"
+                    keysetdict[kid] = JWKRSA(MbedTLS.MD_SHA384, pubkey(n, e, MbedTLS.MD_SHA384))
+                elseif alg == "RS512"
+                    keysetdict[kid] = JWKRSA(MbedTLS.MD_SHA512, pubkey(n, e, MbedTLS.MD_SHA512))
+                else
+                    @warn("key alg $(key["alg"]) not supported yet, skipping key $kid")
+                    continue
+                end
+            elseif kty == "oct"
+                k = base64decode(urldec(key["k"]))
+                if alg == "HS256"
+                    keysetdict[kid] = JWKSymmetric(MbedTLS.MD_SHA256, k)
+                elseif alg == "HS384"
+                    keysetdict[kid] = JWKSymmetric(MbedTLS.MD_SHA384, k)
+                elseif alg == "HS512"
+                    keysetdict[kid] = JWKSymmetric(MbedTLS.MD_SHA512, k)
+                else
+                    @warn("key alg $(key["alg"]) not supported yet, skipping key $kid")
+                    continue
                 end
             else
-                @warn("key alg $(key["alg"]) not supported yet, skipping key $kid")
+                @warn("key type $(key["kty"]) not supported yet, skipping key $kid")
                 continue
             end
-        elseif kty == "oct"
-            if alg == "HS256"
-                k = base64decode(urldec(key["k"]))
-                keysetdict[kid] = JWKSymmetric(MbedTLS.MD_SHA256, k)
-            else
-                @warn("key alg $(key["alg"]) not supported yet, skipping key $kid")
-                continue
-            end
-        else
-            @warn("key type $(key["kty"]) not supported yet, skipping key $kid")
-            continue
+        catch ex
+            @warn("exception $ex trying to decode, skipping key $kid")
         end
     end
     nothing
 end
 
-function pubkey(b64n, b64e)
-    bytesn = base64decode(b64n)
-    bytese = base64decode(b64e)
+function pubkey(bytesn, bytese, halg)
     n = parse(BigInt, bytes2hex(bytesn); base=16)
     e = parse(BigInt, bytes2hex(bytese); base=16)
     
-    R = RSA(MbedTLS.MBEDTLS_RSA_PKCS_V15, MD_SHA256)
+    R = RSA(MbedTLS.MBEDTLS_RSA_PKCS_V15, halg)
     MbedTLS.pubkey_from_vals!(R, e, n)
 end
 
