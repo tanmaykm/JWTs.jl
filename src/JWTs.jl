@@ -114,7 +114,7 @@ function sign!(jwt::JWT, key::T, kid::String="") where {T <: JWK}
             alg = "RS256"
         elseif key.kind === MbedTLS.MD_SHA384
             alg = "RS384"
-        elseif key.kind === MbedTLS.MD_SHA512
+        elseif key.kind === MbedTLS.MD_SHA
             alg = "RS512"
         else
             error("unsupported key algorithm")
@@ -124,7 +124,7 @@ function sign!(jwt::JWT, key::T, kid::String="") where {T <: JWK}
             alg = "HS256"
         elseif key.kind === MbedTLS.MD_SHA384
             alg = "HS384"
-        elseif key.kind === MbedTLS.MD_SHA512
+        elseif key.kind === MbedTLS.MD_SHA
             alg = "HS512"
         else
             error("unsupported key algorithm")
@@ -177,7 +177,7 @@ function refresh!(keyseturl::String, keysetdict::Dict{String,JWK})
                 elseif alg == "RS384"
                     keysetdict[kid] = JWKRSA(MbedTLS.MD_SHA384, pubkey(n, e, MbedTLS.MD_SHA384))
                 elseif alg == "RS512"
-                    keysetdict[kid] = JWKRSA(MbedTLS.MD_SHA512, pubkey(n, e, MbedTLS.MD_SHA512))
+                    keysetdict[kid] = JWKRSA(MbedTLS.MD_SHA, pubkey(n, e, MbedTLS.MD_SHA))
                 else
                     @warn("key alg $(key["alg"]) not supported yet, skipping key $kid")
                     continue
@@ -189,7 +189,7 @@ function refresh!(keyseturl::String, keysetdict::Dict{String,JWK})
                 elseif alg == "HS384"
                     keysetdict[kid] = JWKSymmetric(MbedTLS.MD_SHA384, k)
                 elseif alg == "HS512"
-                    keysetdict[kid] = JWKSymmetric(MbedTLS.MD_SHA512, k)
+                    keysetdict[kid] = JWKSymmetric(MbedTLS.MD_SHA, k)
                 else
                     @warn("key alg $(key["alg"]) not supported yet, skipping key $kid")
                     continue
