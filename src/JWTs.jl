@@ -39,8 +39,17 @@ mutable struct JWKSet
     function JWKSet(url::String)
         new(url, Dict{String,JWK}())
     end
+
+    function JWKSet(keyset::Vector)
+        keysetdict = Dict{String,JWK}()
+        refresh!(keyset, keysetdict)
+        new("", keysetdict)
+    end
 end
-show(io::IO, jwt::JWKSet) = print(io, "JWKSet $(length(jwt.keys)) keys ($(jwt.url))")
+function show(io::IO, jwk::JWKSet)
+    print(io, "JWKSet $(length(jwk.keys)) keys")
+    isempty(jwk.url) || print(io, " ($(jwk.url))")
+end
 
 """
 JWT represents a JWT payload at the minimum.
@@ -152,16 +161,21 @@ function refresh!(keyset::JWKSet, keyseturl::String)
 end
 
 function refresh!(keyset::JWKSet)
-    keys = Dict{String,JWK}()
-    refresh!(keyset.url, keys)
-    keyset.keys = keys
+    if !isempty(keyset.url)
+        keys = Dict{String,JWK}()
+        refresh!(keyset.url, keys)
+        keyset.keys = keys
+    end
     nothing
 end
 
 function refresh!(keyseturl::String, keysetdict::Dict{String,JWK})
     jstr = startswith(keyseturl, "file://") ? readchomp(keyseturl[8:end]) : String(HTTP.request("GET", keyseturl).body)
     keys = JSON.parse(jstr)["keys"]
+    refresh!(keys, keysetdict)
+end
 
+function refresh!(keys::Vector, keysetdict::Dict{String,JWK})
     for key in keys
         kid = key["kid"]
         kty = key["kty"]

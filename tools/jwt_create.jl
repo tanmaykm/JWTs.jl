@@ -24,7 +24,7 @@ function main()
 
     jwt = JWT(; payload=JSON.parse(readchomp(ARGS[1])))
     sign!(jwt, keyset, kid)
-    println(jwt)
+    println(string(jwt))
 end
 
 main()
