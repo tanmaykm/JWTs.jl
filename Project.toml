@@ -14,7 +14,10 @@ MbedTLS = "739be429-bea8-5141-9913-cc70e7f3736d"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [compat]
-julia = "≥ 1.0.0"
+julia = "1"
+HTTP = "0.8, 0.9"
+JSON = "0.20, 0.21"
+MbedTLS = "0.6.8, 0.7, 1"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
