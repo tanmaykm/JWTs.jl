@@ -24,6 +24,15 @@ function test_and_get_keyset(url)
     keyset
 end
 
+function test_in_mem_keyset(template)
+    print_header("keyset: $template")
+    keyset = JWKSet(JSON.parse(read(template, String))["keys"])
+    @test length(keyset.keys) == 4
+    for (k,v) in keyset.keys
+        println("    ", k, " => ", v.key)
+    end
+end
+
 function test_signing(keyset_url)
     keyset = test_and_get_keyset(keyset_url)
 
@@ -98,3 +107,4 @@ end
 
 test_and_get_keyset("https://www.googleapis.com/oauth2/v3/certs")
 test_signing("file://" * joinpath(@__DIR__, "jwkkey.json"))
+test_in_mem_keyset(joinpath(@__DIR__, "jwkkey.json"))

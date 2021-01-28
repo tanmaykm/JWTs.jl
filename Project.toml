@@ -1,9 +1,10 @@
 name = "JWTs"
 uuid = "d850fbd6-035d-5a70-a269-1ca2e636ac6c"
 keywords = ["julialang", "jwt", "jwt-authentication", "jwkset", "signing"]
+authors = ["Tanmay Mohapatra <tanmaykm@gmail.com>"]
 license = "MIT"
 desc = "JSON Web Tokens (JWT) for Julia"
-version = "0.1.2"
+version = "0.1.3"
 
 [deps]
 Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
