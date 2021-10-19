@@ -3,7 +3,7 @@ module JWTs
 using MbedTLS
 using JSON
 using Base64
-using HTTP
+using Downloads
 using Random
 
 import Base: show, isvalid
@@ -179,7 +179,13 @@ function refresh!(keyset::JWKSet)
 end
 
 function refresh!(keyseturl::String, keysetdict::Dict{String,JWK})
-    jstr = startswith(keyseturl, "file://") ? readchomp(keyseturl[8:end]) : String(HTTP.request("GET", keyseturl; readtimeout=10).body)
+    if startswith(keyseturl, "file://")
+        jstr = readchomp(keyseturl[8:end])
+    else
+        output = PipeBuffer()
+        Downloads.request(keyseturl; method="GET", output=output)
+        jstr = String(take!(output))
+    end
     keys = JSON.parse(jstr)["keys"]
     refresh!(keys, keysetdict)
 end
