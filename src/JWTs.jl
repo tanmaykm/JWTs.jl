@@ -107,7 +107,16 @@ function validate!(jwt::JWT, key::T) where {T <: JWK}
     sigbytes = base64decode(urldec(jwt.signature))
 
     jwt.verified = true
-    jwt.valid = (T <: JWKRSA) ? (MbedTLS.verify(key.key, key.kind, MbedTLS.digest(key.kind, data), sigbytes) == 0) : (MbedTLS.digest(key.kind, data, key.key) == sigbytes)
+
+    jwt.valid = if T <: JWKRSA
+        try
+            MbedTLS.verify(key.key, key.kind, MbedTLS.digest(key.kind, data), sigbytes) == 0
+        catch
+            false
+        end
+    else
+        MbedTLS.digest(key.kind, data, key.key) == sigbytes
+    end
 end
 
 function sign!(jwt::JWT, keyset::JWKSet, kid::String)
@@ -170,7 +179,7 @@ function refresh!(keyset::JWKSet)
 end
 
 function refresh!(keyseturl::String, keysetdict::Dict{String,JWK})
-    jstr = startswith(keyseturl, "file://") ? readchomp(keyseturl[8:end]) : String(HTTP.request("GET", keyseturl).body)
+    jstr = startswith(keyseturl, "file://") ? readchomp(keyseturl[8:end]) : String(HTTP.request("GET", keyseturl; readtimeout=10).body)
     keys = JSON.parse(jstr)["keys"]
     refresh!(keys, keysetdict)
 end
