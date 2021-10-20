@@ -31,6 +31,16 @@ julia> for (k,v) in keyset.keys
     8aad66bdefc1b43d8db27e65e2e2ef301879d3e8 => MbedTLS.RSA(Ptr{MbedTLS.mbedtls_rsa_context} @0x0000000001d77390)
 ```
 
+While symmetric keys for signing can simply be read from a jwk file into a `JWKSet`, creating a JWKSet for asymmetric key signing needs to be done by the calling code. The process may vary depending on where the private key is stored, but as an example below is a snippet of code that picks up private keys from file corresponding to each key in a jwk file.
+
+```julia
+keyset = JWKSet(keyset_url)
+signingkeyset = deepcopy(keyset)
+for k in keys(signingkeyset.keys)
+    signingkeyset.keys[k] = MbedTLS.parse_keyfile(joinpath(dirname(keyset_url), "$k.private.pem"))
+end
+```
+
 ## Tokens
 
 **JWT** represents a JSON Web Token containing the payload at the minimum. When signed, it holds the header (with key id and algorithm used) and signature too. The parts are stored in encoded form.
