@@ -38,7 +38,7 @@ keyset = JWKSet(keyset_url)
 refresh!(keyset)
 signingkeyset = deepcopy(keyset)
 for k in keys(signingkeyset.keys)
-    signingkeyset.keys[k].key = MbedTLS.parse_keyfile(joinpath(dirname(keyset_url), "$k.private.pem"))
+    signingkeyset.keys[k] = JWKRSA(signingkeyset.keys[k].kind, MbedTLS.parse_keyfile(joinpath(dirname(keyset_url), "$k.private.pem")))
 end
 ```
 
