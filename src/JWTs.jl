@@ -14,7 +14,7 @@ struct JWKSymmetric
     key::Vector{UInt8}
 end
 
-mutable struct JWKRSA
+struct JWKRSA
     kind::MbedTLS.MDKind
     key::Union{RSA,MbedTLS.PKContext}
 end
