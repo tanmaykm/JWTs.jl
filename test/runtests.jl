@@ -109,7 +109,11 @@ function test_signing_asymmetric_keys(keyset_url)
     refresh!(keyset)
     signingkeyset = deepcopy(keyset)
     for k in keys(signingkeyset.keys)
-        signingkeyset.keys[k].key = MbedTLS.parse_keyfile(joinpath("keys/rsa/", "$k.private.pem"))
+        keyfile = joinpath(dirname(keyset_url), "$k.private.pem")
+        if startswith(keyfile, "file://")
+            keyfile = keyfile[8:end]
+        end
+        signingkeyset.keys[k] = JWKRSA(signingkeyset.keys[k].kind, MbedTLS.parse_keyfile(keyfile))
     end
     test_signing_keys(keyset, signingkeyset)
 end
