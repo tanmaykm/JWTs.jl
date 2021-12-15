@@ -22,7 +22,7 @@ end
 """
 JWK represents a JWK Key (either for signing or verification).
 
-JWK can be either a JWKRSA or JWKSymmetric. A RSA key can 
+JWK can be either a JWKRSA or JWKSymmetric. A RSA key can
 represent either the public or private key.
 """
 const JWK = Union{JWKRSA,JWKSymmetric}
@@ -237,7 +237,7 @@ end
 function pubkey(bytesn, bytese, halg)
     n = parse(BigInt, bytes2hex(bytesn); base=16)
     e = parse(BigInt, bytes2hex(bytese); base=16)
-    
+
     R = RSA(MbedTLS.MBEDTLS_RSA_PKCS_V15, halg)
     MbedTLS.pubkey_from_vals!(R, e, n)
 end

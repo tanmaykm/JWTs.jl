@@ -1,6 +1,7 @@
 using JWTs
 using Test
 using JSON
+using MbedTLS
 
 const test_payload_data = [
     JSON.parse("""{
@@ -105,9 +106,14 @@ end
 function test_signing_asymmetric_keys(keyset_url)
     print_header("signing asymmetric keys")
     keyset = JWKSet(keyset_url)
+    refresh!(keyset)
     signingkeyset = deepcopy(keyset)
     for k in keys(signingkeyset.keys)
-        signingkeyset.keys[k] = MbedTLS.parse_keyfile(joinpath(dirname(keyset_url), "$k.private.pem"))
+        keyfile = joinpath(dirname(keyset_url), "$k.private.pem")
+        if startswith(keyfile, "file://")
+            keyfile = keyfile[8:end]
+        end
+        signingkeyset.keys[k] = JWKRSA(signingkeyset.keys[k].kind, MbedTLS.parse_keyfile(keyfile))
     end
     test_signing_keys(keyset, signingkeyset)
 end

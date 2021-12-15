@@ -35,9 +35,10 @@ While symmetric keys for signing can simply be read from a jwk file into a `JWKS
 
 ```julia
 keyset = JWKSet(keyset_url)
+refresh!(keyset)
 signingkeyset = deepcopy(keyset)
 for k in keys(signingkeyset.keys)
-    signingkeyset.keys[k] = MbedTLS.parse_keyfile(joinpath(dirname(keyset_url), "$k.private.pem"))
+    signingkeyset.keys[k] = JWKRSA(signingkeyset.keys[k].kind, MbedTLS.parse_keyfile(joinpath(dirname(keyset_url), "$k.private.pem")))
 end
 ```
 
