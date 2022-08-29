@@ -208,7 +208,7 @@ function refresh!(keys::Vector, keysetdict::Dict{String,JWK}; default_alg = "RS2
                 elseif alg == "RS512"
                     keysetdict[kid] = JWKRSA(MbedTLS.MD_SHA, pubkey(n, e, MbedTLS.MD_SHA))
                 else
-                    @warn("key alg $(key["alg"]) not supported yet, skipping key $kid")
+                    @warn("key alg $alg not supported yet, skipping key $kid")
                     continue
                 end
             elseif kty == "oct"
@@ -220,11 +220,11 @@ function refresh!(keys::Vector, keysetdict::Dict{String,JWK}; default_alg = "RS2
                 elseif alg == "HS512"
                     keysetdict[kid] = JWKSymmetric(MbedTLS.MD_SHA, k)
                 else
-                    @warn("key alg $(key["alg"]) not supported yet, skipping key $kid")
+                    @warn("key alg $alg not supported yet, skipping key $kid")
                     continue
                 end
             else
-                @warn("key type $(key["kty"]) not supported yet, skipping key $kid")
+                @warn("key type $alg not supported yet, skipping key $kid")
                 continue
             end
         catch ex
