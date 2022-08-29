@@ -164,21 +164,21 @@ function sign!(jwt::JWT, key::T, kid::String="") where {T <: JWK}
     nothing
 end
 
-function refresh!(keyset::JWKSet, keyseturl::String)
+function refresh!(keyset::JWKSet, keyseturl::String; default_alg = "RS256")
     keyset.url = keyseturl
-    refresh!(keyset)
+    refresh!(keyset; default_alg)
 end
 
-function refresh!(keyset::JWKSet)
+function refresh!(keyset::JWKSet; default_alg = "RS256")
     if !isempty(keyset.url)
         keys = Dict{String,JWK}()
-        refresh!(keyset.url, keys)
+        refresh!(keyset.url, keys; default_alg)
         keyset.keys = keys
     end
     nothing
 end
 
-function refresh!(keyseturl::String, keysetdict::Dict{String,JWK})
+function refresh!(keyseturl::String, keysetdict::Dict{String,JWK}; default_alg = "RS256")
     if startswith(keyseturl, "file://")
         jstr = readchomp(keyseturl[8:end])
     else
@@ -187,14 +187,14 @@ function refresh!(keyseturl::String, keysetdict::Dict{String,JWK})
         jstr = String(take!(output))
     end
     keys = JSON.parse(jstr)["keys"]
-    refresh!(keys, keysetdict)
+    refresh!(keys, keysetdict; default_alg)
 end
 
-function refresh!(keys::Vector, keysetdict::Dict{String,JWK})
+function refresh!(keys::Vector, keysetdict::Dict{String,JWK}; default_alg = "RS256")
     for key in keys
         kid = key["kid"]
         kty = key["kty"]
-        alg = key["alg"]
+        alg = get(key, "alg", default_alg)
 
         # ref: https://tools.ietf.org/html/rfc7518
         try
