@@ -224,7 +224,7 @@ function refresh!(keys::Vector, keysetdict::Dict{String,JWK}; default_alg = "RS2
                     continue
                 end
             else
-                @warn("key type $kty not supported yet, skipping key $kid")
+                @warn("key type $(key["kty"]) not supported yet, skipping key $kid")
                 continue
             end
         catch ex
