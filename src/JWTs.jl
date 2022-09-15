@@ -164,21 +164,21 @@ function sign!(jwt::JWT, key::T, kid::String="") where {T <: JWK}
     nothing
 end
 
-function refresh!(keyset::JWKSet, keyseturl::String; default_alg = "RS256")
+function refresh!(keyset::JWKSet, keyseturl::String; default_algs = Dict("RSA" => "RS256", "oct" => "HS256"))
     keyset.url = keyseturl
-    refresh!(keyset; default_alg)
+    refresh!(keyset; default_algs)
 end
 
-function refresh!(keyset::JWKSet; default_alg = "RS256")
+function refresh!(keyset::JWKSet; default_algs = Dict("RSA" => "RS256", "oct" => "HS256"))
     if !isempty(keyset.url)
         keys = Dict{String,JWK}()
-        refresh!(keyset.url, keys; default_alg)
+        refresh!(keyset.url, keys; default_algs)
         keyset.keys = keys
     end
     nothing
 end
 
-function refresh!(keyseturl::String, keysetdict::Dict{String,JWK}; default_alg = "RS256")
+function refresh!(keyseturl::String, keysetdict::Dict{String,JWK}; default_algs = Dict("RSA" => "RS256", "oct" => "HS256"))
     if startswith(keyseturl, "file://")
         jstr = readchomp(keyseturl[8:end])
     else
@@ -187,14 +187,14 @@ function refresh!(keyseturl::String, keysetdict::Dict{String,JWK}; default_alg =
         jstr = String(take!(output))
     end
     keys = JSON.parse(jstr)["keys"]
-    refresh!(keys, keysetdict; default_alg)
+    refresh!(keys, keysetdict; default_algs)
 end
 
-function refresh!(keys::Vector, keysetdict::Dict{String,JWK}; default_alg = "RS256")
+function refresh!(keys::Vector, keysetdict::Dict{String,JWK}; default_algs = Dict("RSA" => "RS256", "oct" => "HS256"))
     for key in keys
         kid = key["kid"]
         kty = key["kty"]
-        alg = get(key, "alg", default_alg)
+        alg = get(key, "alg", get(default_algs, kty, "none"))
 
         # ref: https://tools.ietf.org/html/rfc7518
         try
@@ -224,7 +224,7 @@ function refresh!(keys::Vector, keysetdict::Dict{String,JWK}; default_alg = "RS2
                     continue
                 end
             else
-                @warn("key type $(key["kty"]) not supported yet, skipping key $kid")
+                @warn("key type $kty not supported yet, skipping key $kid")
                 continue
             end
         catch ex
