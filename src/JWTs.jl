@@ -166,13 +166,13 @@ end
 
 function refresh!(keyset::JWKSet, keyseturl::String; default_algs = Dict("RSA" => "RS256", "oct" => "HS256"))
     keyset.url = keyseturl
-    refresh!(keyset; default_algs)
+    refresh!(keyset; default_algs=default_algs)
 end
 
 function refresh!(keyset::JWKSet; default_algs = Dict("RSA" => "RS256", "oct" => "HS256"))
     if !isempty(keyset.url)
         keys = Dict{String,JWK}()
-        refresh!(keyset.url, keys; default_algs)
+        refresh!(keyset.url, keys; default_algs=default_algs)
         keyset.keys = keys
     end
     nothing
@@ -187,7 +187,7 @@ function refresh!(keyseturl::String, keysetdict::Dict{String,JWK}; default_algs 
         jstr = String(take!(output))
     end
     keys = JSON.parse(jstr)["keys"]
-    refresh!(keys, keysetdict; default_algs)
+    refresh!(keys, keysetdict; default_algs=default_algs)
 end
 
 function refresh!(keys::Vector, keysetdict::Dict{String,JWK}; default_algs = Dict("RSA" => "RS256", "oct" => "HS256"))
