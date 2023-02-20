@@ -164,21 +164,21 @@ function sign!(jwt::JWT, key::T, kid::String="") where {T <: JWK}
     nothing
 end
 
-function refresh!(keyset::JWKSet, keyseturl::String)
+function refresh!(keyset::JWKSet, keyseturl::String; default_algs = Dict("RSA" => "RS256", "oct" => "HS256"))
     keyset.url = keyseturl
-    refresh!(keyset)
+    refresh!(keyset; default_algs)
 end
 
-function refresh!(keyset::JWKSet)
+function refresh!(keyset::JWKSet; default_algs = Dict("RSA" => "RS256", "oct" => "HS256"))
     if !isempty(keyset.url)
         keys = Dict{String,JWK}()
-        refresh!(keyset.url, keys)
+        refresh!(keyset.url, keys; default_algs)
         keyset.keys = keys
     end
     nothing
 end
 
-function refresh!(keyseturl::String, keysetdict::Dict{String,JWK})
+function refresh!(keyseturl::String, keysetdict::Dict{String,JWK}; default_algs = Dict("RSA" => "RS256", "oct" => "HS256"))
     if startswith(keyseturl, "file://")
         jstr = readchomp(keyseturl[8:end])
     else
@@ -187,14 +187,14 @@ function refresh!(keyseturl::String, keysetdict::Dict{String,JWK})
         jstr = String(take!(output))
     end
     keys = JSON.parse(jstr)["keys"]
-    refresh!(keys, keysetdict)
+    refresh!(keys, keysetdict; default_algs)
 end
 
-function refresh!(keys::Vector, keysetdict::Dict{String,JWK})
+function refresh!(keys::Vector, keysetdict::Dict{String,JWK}; default_algs = Dict("RSA" => "RS256", "oct" => "HS256"))
     for key in keys
         kid = key["kid"]
         kty = key["kty"]
-        alg = key["alg"]
+        alg = get(key, "alg", get(default_algs, kty, "none"))
 
         # ref: https://tools.ietf.org/html/rfc7518
         try
@@ -208,7 +208,7 @@ function refresh!(keys::Vector, keysetdict::Dict{String,JWK})
                 elseif alg == "RS512"
                     keysetdict[kid] = JWKRSA(MbedTLS.MD_SHA, pubkey(n, e, MbedTLS.MD_SHA))
                 else
-                    @warn("key alg $(key["alg"]) not supported yet, skipping key $kid")
+                    @warn("key alg $alg not supported yet, skipping key $kid")
                     continue
                 end
             elseif kty == "oct"
@@ -220,11 +220,11 @@ function refresh!(keys::Vector, keysetdict::Dict{String,JWK})
                 elseif alg == "HS512"
                     keysetdict[kid] = JWKSymmetric(MbedTLS.MD_SHA, k)
                 else
-                    @warn("key alg $(key["alg"]) not supported yet, skipping key $kid")
+                    @warn("key alg $alg not supported yet, skipping key $kid")
                     continue
                 end
             else
-                @warn("key type $(key["kty"]) not supported yet, skipping key $kid")
+                @warn("key type $kty not supported yet, skipping key $kid")
                 continue
             end
         catch ex
