@@ -112,3 +112,19 @@ true
 julia> isvalid(jwt)
 true
 ```
+
+The `with_valid_jwt` method can be used to Run `f` with a valid JWT. The validated JWT is passed as an argument to `f`. If the JWT is invalid, an `ArgumentError` is thrown.
+
+```julia
+julia> with_valid_jwt(jwt2, keyset) do valid_jwt
+           @info("claims", claims(valid_jwt))
+       end
+┌ Info: claims
+│   claims(valid_jwt) =
+│    Dict{String, Any} with 10 entries:
+│      "name"           => "Example User"
+│      "exp"            => 1536080651
+│      "aud"            => "example-audience"
+...
+└      "email"          => "user@example.com"
+```

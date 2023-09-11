@@ -7,7 +7,11 @@ using Downloads
 using Random
 
 import Base: show, isvalid
-export JWT, JWK, JWKRSA, JWKSymmetric, JWKSet, issigned, isverified, isvalid, validate!, sign!, show, claims, refresh!, kid
+export JWT, JWK, JWKRSA, JWKSymmetric, JWKSet
+export issigned, isverified, isvalid
+export validate!, sign!, refresh!
+export show, claims, kid
+export with_valid_jwt
 
 struct JWKSymmetric
     kind::MbedTLS.MDKind
@@ -82,10 +86,29 @@ end
 
 decodepart(encoded::String) = JSON.parse(String(base64decode(urldec(encoded))))
 
+"""
+    claims(jwt::JWT)
+
+Get the claims from the JWT payload.
+"""
 claims(jwt::JWT) = decodepart(jwt.payload)
+
+"""
+    issigned(jwt::JWT)
+
+Check if the JWT is signed. Does not check if the JWT is valid.    
+Returns `true` if the JWT is signed, `false` otherwise.
+"""
 issigned(jwt::JWT) = (nothing !== jwt.signature) && (nothing !== jwt.header)
+
 isverified(jwt::JWT) = jwt.verified
 isvalid(jwt::JWT) = jwt.valid
+
+"""
+    kid(jwt::JWT)
+
+Get the key id from the JWT header. The JWT must be signed. An `AssertionError` is thrown otherwise.
+"""
 function kid(jwt::JWT)
     @assert issigned(jwt)
     decodepart(jwt.header)["kid"]
@@ -93,6 +116,15 @@ end
 
 show(io::IO, jwt::JWT) = print(io, issigned(jwt) ? join([jwt.header, jwt.payload, jwt.signature], '.') : jwt.payload)
 
+"""
+    validate!(jwt, keyset)
+
+Validate the JWT using the keys in the keyset.
+The JWT must be signed. An `AssertionError` is thrown otherwise.
+The keyset must contain the key id from the JWT header. A KeyError is thrown otherwise.
+
+Returns `true` if the JWT is valid, `false` otherwise.
+"""
 validate!(jwt::JWT, keyset::JWKSet) = validate!(jwt, keyset, kid(jwt))
 function validate!(jwt::JWT, keyset::JWKSet, kid::String)
     isverified(jwt) && (return isvalid(jwt))
@@ -119,11 +151,36 @@ function validate!(jwt::JWT, key::T) where {T <: JWK}
     end
 end
 
+"""
+    sign!(jwt, keyset, kid)
+
+Sign the JWT using the keys in the keyset. The key id and key algorithm is included in the JWT header.
+Updates the jwt with the header and signature.
+Returns `nothing`.
+
+Arguments:
+- `jwt`: The JWT to sign. If the JWT is already signed, it is not signed again.
+- `keyset`: The JWKSet to use for signing. Only keys in this keyset are used for signing.
+- `kid`: The key id to use for signing. The keyset must contain the key id from the JWT header. A KeyError is thrown otherwise.
+"""
 function sign!(jwt::JWT, keyset::JWKSet, kid::String)
     issigned(jwt) && return
     (kid in keys(keyset.keys)) || refresh!(keyset)
     sign!(jwt::JWT, keyset.keys[kid], kid)
 end
+
+"""
+    sign!(jwt, key, kid)
+
+Sign the JWT using the key. The key id and key algorithm is included in the JWT header.
+Updates the jwt with the header and signature.
+Returns `nothing`.
+
+Arguments:
+- `jwt`: The JWT to sign. If the JWT is already signed, it is not signed again.
+- `key`: The JWK to use for signing.
+- `kid`: The key id to include in the JWT header.
+"""
 function sign!(jwt::JWT, key::T, kid::String="") where {T <: JWK}
     issigned(jwt) && return
 
@@ -164,6 +221,25 @@ function sign!(jwt::JWT, key::T, kid::String="") where {T <: JWK}
     nothing
 end
 
+"""
+    refresh!(keyset, keyseturl; default_algs)
+    refresh!(keyset; default_algs)
+
+Arguments:
+- `keyset`: The JWKSet to refresh.
+- `keyseturl`: The URL to fetch the keys from.
+
+Keyword arguments:
+- `default_algs`: A dictionary of default algorithms to use for each key type.
+
+Refresh the keyset with the keys from the keyseturl. The keyseturl can either be of `http(s)://` or `file://` type.
+The keyset is updated with the keys from the keyseturl, old keys are removed.
+
+If the keyseturl is not specified, the keyset is refreshed with the keys from the keyseturl already set in the keyset.
+
+The default algorithm values are referred to only if the keyset does not specify the exact algorithm type.
+E.g. if only "RSA" is specified as the algorithm, "RS256" will be assumed.
+"""
 function refresh!(keyset::JWKSet, keyseturl::String; default_algs = Dict("RSA" => "RS256", "oct" => "HS256"))
     keyset.url = keyseturl
     refresh!(keyset; default_algs=default_algs)
@@ -261,6 +337,32 @@ function padb64(bs)
         bs = bs * "="^(4 - surplus)
     end
     bs
+end
+
+"""
+    with_valid_jwt(f, jwt, keyset; kid=nothing)
+
+Run `f` with a valid JWT. The validated JWT is passed as an argument to `f`. If the JWT is invalid, an `ArgumentError` is thrown.
+
+Arguments:
+- `f`: The function to execute with a valid JWT. The validated JWT is passed as an argument to `f`.
+- `jwt`: The JWT string or JWT object to use.
+- `keyset`: The JWKSet to use for validation. Only keys in this keyset are used for validation.
+
+Keyword arguments:
+- `kid`: The key id to use for validation. If not specified, the `kid` from the JWT header is used.
+"""
+with_valid_jwt(f::Function, jwt::String, keyset::JWKSet; kid::Union{Nothing,String}=nothing) = with_valid_jwt(f, JWT(jwt), keyset; kid=kid)
+function with_valid_jwt(f::Function, jwt::JWT, keyset::JWKSet; kid::Union{Nothing,String}=nothing)
+    if isnothing(kid)
+        validate!(jwt, keyset)
+    else
+        validate!(jwt, keyset, kid)
+    end
+
+    isvalid(jwt) || throw(ArgumentError("invalid jwt"))
+
+    return f(jwt)
 end
 
 end # module JWTs
