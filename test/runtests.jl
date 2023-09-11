@@ -124,7 +124,30 @@ function test_signing_symmetric_keys(keyset_url)
     test_signing_keys(keyset, keyset)
 end
 
+function test_with_valid_jwt(keyset_url)
+    print_header("with_valid_jwt do block")
+
+    keyset = JWKSet(keyset_url)
+    refresh!(keyset)
+
+    d = test_payload_data[1]
+    jwt = JWT(; payload=d)
+    key = first(keys(keyset.keys))
+    sign!(jwt, keyset, key)
+
+    jwt2 = JWT(; jwt=string(jwt))
+    with_valid_jwt(jwt2, keyset) do jwt3
+        @test isvalid(jwt3)
+        @test claims(jwt3) == d
+    end
+    with_valid_jwt(jwt2, keyset; kid=key) do jwt3
+        @test isvalid(jwt3)
+        @test claims(jwt3) == d
+    end
+end
+
 test_and_get_keyset("https://www.googleapis.com/oauth2/v3/certs")
 test_signing_symmetric_keys("file://" * joinpath(@__DIR__, "keys", "oct", "jwkkey.json"))
 test_in_mem_keyset(joinpath(@__DIR__, "keys", "oct", "jwkkey.json"))
 test_signing_asymmetric_keys("file://" * joinpath(@__DIR__, "keys", "rsa", "jwkkey.json"))
+test_with_valid_jwt("file://" * joinpath(@__DIR__, "keys", "oct", "jwkkey.json"))
