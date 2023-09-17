@@ -135,6 +135,11 @@ function test_with_valid_jwt(keyset_url)
     key = first(keys(keyset.keys))
     sign!(jwt, keyset, key)
 
+    with_valid_jwt(jwt, keyset) do jwt3
+        @test isvalid(jwt3)
+        @test claims(jwt3) == d
+    end
+    
     jwt2 = JWT(; jwt=string(jwt))
     with_valid_jwt(jwt2, keyset) do jwt3
         @test isvalid(jwt3)

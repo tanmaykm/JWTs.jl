@@ -346,7 +346,7 @@ Run `f` with a valid JWT. The validated JWT is passed as an argument to `f`. If 
 
 Arguments:
 - `f`: The function to execute with a valid JWT. The validated JWT is passed as an argument to `f`.
-- `jwt`: The JWT string or JWT object to use.
+- `jwt`: The JWT string or JWT object to use. If a string is passed, it is converted to a JWT object.
 - `keyset`: The JWKSet to use for validation. Only keys in this keyset are used for validation.
 
 Keyword arguments:

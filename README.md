@@ -7,7 +7,7 @@ JSON Web Tokens (JWT) are an open, industry standard [RFC 7519](https://tools.ie
 
 ## Keys and Key Sets
 
-**JWK** represents a JWK Key (either for signing or verification). JWK can be either a **JWKRSA** or **JWKSymmetric**. A RSA key can represent either the public or private key.
+**JWK** represents a JWK Key (either for signing or verification). JWK can be either a **JWKRSA** or **JWKSymmetric**. A RSA key can represent either the public or private key. Ref: https://datatracker.ietf.org/doc/html/rfc7517
 
 **JWKSet** holds a set of keys, fetched from a OpenId key URL, each key identified by a key id. The OpenId key URL is usually found in the OpenId configuration (e.g. `jwks_uri` element in <https://accounts.google.com/.well-known/openid-configuration>).
 
