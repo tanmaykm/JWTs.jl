@@ -205,7 +205,6 @@ function sign!(jwt::JWT, key::T, kid::String="") where {T <: JWK}
             error("unsupported key algorithm")
         end
     end
-    alg = (T <: JWKRSA) ? "RS256" : "HS256"
     header_dict = Dict{String,String}("alg"=>alg, "typ"=>"JWT")
     isempty(kid) || (header_dict["kid"] = kid)
     header = urlenc(base64encode(JSON.json(header_dict)))
