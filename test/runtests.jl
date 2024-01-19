@@ -172,3 +172,19 @@ test_signing_symmetric_keys("file://" * joinpath(@__DIR__, "keys", "oct", "jwkke
 test_in_mem_keyset(joinpath(@__DIR__, "keys", "oct", "jwkkey.json"))
 test_signing_asymmetric_keys("file://" * joinpath(@__DIR__, "keys", "rsa", "jwkkey.json"))
 test_with_valid_jwt("file://" * joinpath(@__DIR__, "keys", "oct", "jwkkey.json"))
+
+@testset "alg" begin
+    rsakey = MbedTLS.parse_keyfile(joinpath(@__DIR__, "keys", "rsa", "rsakey1.private.pem"))
+    @test JWTs.alg(JWKRSA(MbedTLS.MD_SHA256, rsakey)) == "RS256"
+    @test JWTs.alg(JWKRSA(MbedTLS.MD_SHA384, rsakey)) == "RS384"
+    @test JWTs.alg(JWKRSA(MbedTLS.MD_SHA, rsakey)) == "RS512"
+
+    @test JWTs.alg(JWKSymmetric(MbedTLS.MD_SHA256, UInt8[])) == "HS256"
+    @test JWTs.alg(JWKSymmetric(MbedTLS.MD_SHA384, UInt8[])) == "HS384"
+    @test JWTs.alg(JWKSymmetric(MbedTLS.MD_SHA, UInt8[])) == "HS512"
+
+    for kind in (MbedTLS.MD_SHA1, MbedTLS.MD_SHA224)
+        @test_throws ArgumentError JWTs.alg(JWKRSA(kind, rsakey))
+        @test_throws ArgumentError JWTs.alg(JWKSymmetric(kind, UInt8[]))
+    end
+end
