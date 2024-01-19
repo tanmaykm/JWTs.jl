@@ -74,14 +74,26 @@ function test_signing_keys(keyset, signingkeyset)
     for k in keys(keyset.keys)
         for d in test_payload_data
             jwt = JWT(; payload=d)
+            @test claims(jwt) == d
+            @test_throws AssertionError JWTs.alg(jwt)
+            @test_throws AssertionError kid(jwt)
             @test !issigned(jwt)
             sign!(jwt, signingkeyset, k)
             @test issigned(jwt)
             @test isvalid(jwt)
             @test isverified(jwt)
+            @test claims(jwt) == d
+            @test JWTs.alg(jwt) == JWTs.alg(keyset.keys[k])
+            @test kid(jwt) == k
+            header = JWTs.decodepart(jwt.header)
+            @test header == Dict("alg" => JWTs.alg(keyset.keys[k]), "kid" => k, "typ" => "JWT")
 
             println("    JWT: ", jwt)
             jwt2 = JWT(; jwt=string(jwt))
+            @test claims(jwt2) == claims(jwt)
+            @test JWTs.alg(jwt2) == JWTs.alg(jwt)
+            @test kid(jwt2) == kid(jwt)
+            @test JWTs.decodepart(jwt2.header) == JWTs.decodepart(jwt.header)
             @test issigned(jwt2)
             @test !isverified(jwt2)
             @test isvalid(jwt2) === nothing
@@ -91,10 +103,14 @@ function test_signing_keys(keyset, signingkeyset)
             @test isverified(jwt)
 
             jwt2 = JWT(; jwt=string(jwt))
+            @test claims(jwt2) == claims(jwt)
+            @test JWTs.alg(jwt2) == JWTs.alg(jwt)
+            @test kid(jwt2) == kid(jwt)
+            @test JWTs.decodepart(jwt2.header) == JWTs.decodepart(jwt.header)
             @test issigned(jwt2)
             @test !isverified(jwt2)
             @test isvalid(jwt2) === nothing
-            invalidkey = first(filter(x->x!=k, keys(keyset.keys)))
+            invalidkey = findfirst(x -> x != keyset.keys[k], keyset.keys)
             @test !validate!(jwt2, keyset, invalidkey)
             @test issigned(jwt2)
             @test !isvalid(jwt2)
