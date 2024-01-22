@@ -74,14 +74,26 @@ function test_signing_keys(keyset, signingkeyset)
     for k in keys(keyset.keys)
         for d in test_payload_data
             jwt = JWT(; payload=d)
+            @test claims(jwt) == d
+            @test_throws AssertionError JWTs.alg(jwt)
+            @test_throws AssertionError kid(jwt)
             @test !issigned(jwt)
             sign!(jwt, signingkeyset, k)
             @test issigned(jwt)
             @test isvalid(jwt)
             @test isverified(jwt)
+            @test claims(jwt) == d
+            @test JWTs.alg(jwt) == JWTs.alg(keyset.keys[k])
+            @test kid(jwt) == k
+            header = JWTs.decodepart(jwt.header)
+            @test header == Dict("alg" => JWTs.alg(keyset.keys[k]), "kid" => k, "typ" => "JWT")
 
             println("    JWT: ", jwt)
             jwt2 = JWT(; jwt=string(jwt))
+            @test claims(jwt2) == claims(jwt)
+            @test JWTs.alg(jwt2) == JWTs.alg(jwt)
+            @test kid(jwt2) == kid(jwt)
+            @test JWTs.decodepart(jwt2.header) == JWTs.decodepart(jwt.header)
             @test issigned(jwt2)
             @test !isverified(jwt2)
             @test isvalid(jwt2) === nothing
@@ -91,10 +103,14 @@ function test_signing_keys(keyset, signingkeyset)
             @test isverified(jwt)
 
             jwt2 = JWT(; jwt=string(jwt))
+            @test claims(jwt2) == claims(jwt)
+            @test JWTs.alg(jwt2) == JWTs.alg(jwt)
+            @test kid(jwt2) == kid(jwt)
+            @test JWTs.decodepart(jwt2.header) == JWTs.decodepart(jwt.header)
             @test issigned(jwt2)
             @test !isverified(jwt2)
             @test isvalid(jwt2) === nothing
-            invalidkey = first(filter(x->x!=k, keys(keyset.keys)))
+            invalidkey = findfirst(x -> x != keyset.keys[k], keyset.keys)
             @test !validate!(jwt2, keyset, invalidkey)
             @test issigned(jwt2)
             @test !isvalid(jwt2)
@@ -156,3 +172,19 @@ test_signing_symmetric_keys("file://" * joinpath(@__DIR__, "keys", "oct", "jwkke
 test_in_mem_keyset(joinpath(@__DIR__, "keys", "oct", "jwkkey.json"))
 test_signing_asymmetric_keys("file://" * joinpath(@__DIR__, "keys", "rsa", "jwkkey.json"))
 test_with_valid_jwt("file://" * joinpath(@__DIR__, "keys", "oct", "jwkkey.json"))
+
+@testset "alg" begin
+    rsakey = MbedTLS.parse_keyfile(joinpath(@__DIR__, "keys", "rsa", "rsakey1.private.pem"))
+    @test JWTs.alg(JWKRSA(MbedTLS.MD_SHA256, rsakey)) == "RS256"
+    @test JWTs.alg(JWKRSA(MbedTLS.MD_SHA384, rsakey)) == "RS384"
+    @test JWTs.alg(JWKRSA(MbedTLS.MD_SHA, rsakey)) == "RS512"
+
+    @test JWTs.alg(JWKSymmetric(MbedTLS.MD_SHA256, UInt8[])) == "HS256"
+    @test JWTs.alg(JWKSymmetric(MbedTLS.MD_SHA384, UInt8[])) == "HS384"
+    @test JWTs.alg(JWKSymmetric(MbedTLS.MD_SHA, UInt8[])) == "HS512"
+
+    for kind in (MbedTLS.MD_SHA1, MbedTLS.MD_SHA224)
+        @test_throws ArgumentError JWTs.alg(JWKRSA(kind, rsakey))
+        @test_throws ArgumentError JWTs.alg(JWKSymmetric(kind, UInt8[]))
+    end
+end

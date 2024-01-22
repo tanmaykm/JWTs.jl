@@ -107,11 +107,41 @@ isvalid(jwt::JWT) = jwt.valid
 """
     kid(jwt::JWT)
 
-Get the key id from the JWT header. The JWT must be signed. An `AssertionError` is thrown otherwise.
+Get the key id from the JWT header, or `nothing` if the `kid` parameter is not included in the JWT header.
+
+The JWT must be signed. An `AssertionError` is thrown otherwise.
 """
-function kid(jwt::JWT)
+function kid(jwt::JWT)::String
     @assert issigned(jwt)
-    decodepart(jwt.header)["kid"]
+    get(decodepart(jwt.header), "kid", nothing)
+end
+
+"""
+    alg(jwt::JWT)
+
+Get the key algorithm from the JWT header, or `nothing` if the `alg` parameter is not included in the JWT header.
+
+The JWT must be signed. An `AssertionError` is thrown otherwise.
+"""
+function alg(jwt::JWT)::String
+    @assert issigned(jwt)
+    get(decodepart(jwt.header), "alg", nothing)
+end
+
+"""
+    alg(key::JWK)
+
+Get the key algorithm from the JWK key as a string.
+
+Supported algorithms are "RS256", "RS384", "RS512", "HS256", "HS384", and "HS512".
+An `ArgumentError` is thrown for unsupported algorithms.
+"""
+function alg(key::JWK)
+    kind = key.kind
+    if !(kind === MbedTLS.MD_SHA256 || kind === MbedTLS.MD_SHA384 || kind === MbedTLS.MD_SHA)
+        throw(ArgumentError("unsupported key algorithm: $(kind)"))
+    end
+    return string(key isa JWKRSA ? "RS" : "HS", MbedTLS.get_size(kind) << 3)
 end
 
 show(io::IO, jwt::JWT) = print(io, issigned(jwt) ? join([jwt.header, jwt.payload, jwt.signature], '.') : jwt.payload)
@@ -131,7 +161,7 @@ function validate!(jwt::JWT, keyset::JWKSet, kid::String)
     (kid in keys(keyset.keys)) || refresh!(keyset)
     validate!(jwt, keyset.keys[kid])
 end
-function validate!(jwt::JWT, key::T) where {T <: JWK}
+function validate!(jwt::JWT, key::JWK)
     isverified(jwt) && (return isvalid(jwt))
     @assert issigned(jwt)
 
@@ -140,7 +170,10 @@ function validate!(jwt::JWT, key::T) where {T <: JWK}
 
     jwt.verified = true
 
-    jwt.valid = if T <: JWKRSA
+    # Check that the (optional) `alg` header claim matches the algorithm of the validation key
+    alg_jwt = alg(jwt)
+    valid_alg = alg_jwt === nothing || alg_jwt == alg(key)
+    jwt.valid = valid_alg && if key isa JWKRSA
         try
             MbedTLS.verify(key.key, key.kind, MbedTLS.digest(key.kind, data), sigbytes) == 0
         catch
@@ -181,37 +214,15 @@ Arguments:
 - `key`: The JWK to use for signing.
 - `kid`: The key id to include in the JWT header.
 """
-function sign!(jwt::JWT, key::T, kid::String="") where {T <: JWK}
+function sign!(jwt::JWT, key::JWK, kid::String="")
     issigned(jwt) && return
 
-    if T <: JWKRSA
-        if key.kind === MbedTLS.MD_SHA256
-            alg = "RS256"
-        elseif key.kind === MbedTLS.MD_SHA384
-            alg = "RS384"
-        elseif key.kind === MbedTLS.MD_SHA
-            alg = "RS512"
-        else
-            error("unsupported key algorithm")
-        end
-    else
-        if key.kind === MbedTLS.MD_SHA256
-            alg = "HS256"
-        elseif key.kind === MbedTLS.MD_SHA384
-            alg = "HS384"
-        elseif key.kind === MbedTLS.MD_SHA
-            alg = "HS512"
-        else
-            error("unsupported key algorithm")
-        end
-    end
-    alg = (T <: JWKRSA) ? "RS256" : "HS256"
-    header_dict = Dict{String,String}("alg"=>alg, "typ"=>"JWT")
+    header_dict = Dict{String,String}("alg"=>alg(key), "typ"=>"JWT")
     isempty(kid) || (header_dict["kid"] = kid)
     header = urlenc(base64encode(JSON.json(header_dict)))
 
     data = header * "." * jwt.payload
-    sigbytes = (T <: JWKRSA) ?  MbedTLS.sign(key.key, key.kind, MbedTLS.digest(key.kind, data), MersenneTwister(0)) : MbedTLS.digest(key.kind, data, key.key)
+    sigbytes = key isa JWKRSA ?  MbedTLS.sign(key.key, key.kind, MbedTLS.digest(key.kind, data), MersenneTwister(0)) : MbedTLS.digest(key.kind, data, key.key)
     signature = urlenc(base64encode(sigbytes))
 
     jwt.header = header
