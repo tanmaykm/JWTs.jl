@@ -251,15 +251,15 @@ If the keyseturl is not specified, the keyset is refreshed with the keys from th
 The default algorithm values are referred to only if the keyset does not specify the exact algorithm type.
 E.g. if only "RSA" is specified as the algorithm, "RS256" will be assumed.
 """
-function refresh!(keyset::JWKSet, keyseturl::String; default_algs = Dict("RSA" => "RS256", "oct" => "HS256"))
+function refresh!(keyset::JWKSet, keyseturl::String; default_algs = Dict("RSA" => "RS256", "oct" => "HS256"), downloader=nothing)
     keyset.url = keyseturl
-    refresh!(keyset; default_algs=default_algs)
+    refresh!(keyset; default_algs=default_algs, downloader=downloader)
 end
 
-function refresh!(keyset::JWKSet; default_algs = Dict("RSA" => "RS256", "oct" => "HS256"))
+function refresh!(keyset::JWKSet; default_algs = Dict("RSA" => "RS256", "oct" => "HS256"), downloader=nothing)
     if !isempty(keyset.url)
         keys = Dict{String,JWK}()
-        refresh!(keyset.url, keys; default_algs=default_algs)
+        refresh!(keyset.url, keys; default_algs=default_algs, downloader=downloader)
         keyset.keys = keys
     end
     nothing
