@@ -265,12 +265,12 @@ function refresh!(keyset::JWKSet; default_algs = Dict("RSA" => "RS256", "oct" =>
     nothing
 end
 
-function refresh!(keyseturl::String, keysetdict::Dict{String,JWK}; default_algs = Dict("RSA" => "RS256", "oct" => "HS256"))
+function refresh!(keyseturl::String, keysetdict::Dict{String,JWK}; default_algs = Dict("RSA" => "RS256", "oct" => "HS256"), downloader=nothing)
     if startswith(keyseturl, "file://")
         jstr = readchomp(keyseturl[8:end])
     else
         output = PipeBuffer()
-        Downloads.request(keyseturl; method="GET", output=output)
+        Downloads.request(keyseturl; method="GET", output=output, downloader=downloader)
         jstr = String(take!(output))
     end
     keys = JSON.parse(jstr)["keys"]
