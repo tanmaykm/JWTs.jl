@@ -75,8 +75,8 @@ function test_signing_keys(keyset, signingkeyset)
         for d in test_payload_data
             jwt = JWT(; payload=d)
             @test claims(jwt) == d
-            @test_throws AssertionError JWTs.alg(jwt)
-            @test_throws AssertionError kid(jwt)
+            @test_throws ArgumentError JWTs.alg(jwt)
+            @test_throws ArgumentError kid(jwt)
             @test !issigned(jwt)
             sign!(jwt, signingkeyset, k)
             @test issigned(jwt)

@@ -70,7 +70,7 @@ mutable struct JWT
 
     function JWT(; jwt::Union{Nothing,String}=nothing, payload::Union{Nothing,Dict{String,Any},String}=nothing)
         if jwt !== nothing
-            @assert payload === nothing
+            (payload === nothing) || throw(ArgumentError("payload must be nothing if jwt is provided"))
             parts = split(jwt, ".")
             if length(parts) == 3
                 new(parts[2], parts[1], parts[3], false, nothing)
@@ -78,7 +78,7 @@ mutable struct JWT
                 new("", nothing, nothing, true, false)
             end
         else
-            @assert payload !== nothing
+            (payload !== nothing) || throw(ArgumentError("payload must be provided if jwt is not"))
             new(isa(payload, String) ? payload : urlenc(base64encode(JSON.json(payload))), nothing, nothing, false, nothing)
         end
     end
@@ -109,10 +109,10 @@ isvalid(jwt::JWT) = jwt.valid
 
 Get the key id from the JWT header, or `nothing` if the `kid` parameter is not included in the JWT header.
 
-The JWT must be signed. An `AssertionError` is thrown otherwise.
+The JWT must be signed. An `ArgumentError` is thrown otherwise.
 """
 function kid(jwt::JWT)::String
-    @assert issigned(jwt)
+    issigned(jwt) || throw(ArgumentError("jwt is not signed"))
     get(decodepart(jwt.header), "kid", nothing)
 end
 
@@ -121,10 +121,10 @@ end
 
 Get the key algorithm from the JWT header, or `nothing` if the `alg` parameter is not included in the JWT header.
 
-The JWT must be signed. An `AssertionError` is thrown otherwise.
+The JWT must be signed. An `ArgumentError` is thrown otherwise.
 """
 function alg(jwt::JWT)::String
-    @assert issigned(jwt)
+    issigned(jwt) || throw(ArgumentError("jwt is not signed"))
     get(decodepart(jwt.header), "alg", nothing)
 end
 
@@ -150,7 +150,7 @@ show(io::IO, jwt::JWT) = print(io, issigned(jwt) ? join([jwt.header, jwt.payload
     validate!(jwt, keyset)
 
 Validate the JWT using the keys in the keyset.
-The JWT must be signed. An `AssertionError` is thrown otherwise.
+The JWT must be signed. An `ArgumentError` is thrown otherwise.
 The keyset must contain the key id from the JWT header. A KeyError is thrown otherwise.
 
 Returns `true` if the JWT is valid, `false` otherwise.
@@ -163,7 +163,7 @@ function validate!(jwt::JWT, keyset::JWKSet, kid::String)
 end
 function validate!(jwt::JWT, key::JWK)
     isverified(jwt) && (return isvalid(jwt))
-    @assert issigned(jwt)
+    issigned(jwt) || throw(ArgumentError("jwt is not signed"))
 
     data = jwt.header * "." * jwt.payload
     sigbytes = base64decode(urldec(jwt.signature))
