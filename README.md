@@ -42,6 +42,13 @@ for k in keys(signingkeyset.keys)
 end
 ```
 
+The `alg` method on a JWK returns the algorithm used for the key.
+
+```julia
+julia> JWTs.alg(keyset.keys["7978a91347261a291bd71dcab4a464be7d279666"])
+"RS256"
+```
+
 ## Tokens
 
 **JWT** represents a JSON Web Token containing the payload at the minimum. When signed, it holds the header (with key id and algorithm used) and signature too. The parts are stored in encoded form.
@@ -97,6 +104,13 @@ julia> kid(jwt)
 "4Fytp3LfBhriD0eZ-k3aNS042bDiCZXg6bQNJmYoaE"
 ```
 
+The `alg` method shows the algorithm used to sign a JWT.
+
+```julia
+julia> alg(jwt)
+"RS256"
+```
+
 ## Validation
 
 To validate a JWT against a key, call the `validate!` method, passing a key set and the key id to use.
@@ -127,4 +141,11 @@ julia> with_valid_jwt(jwt2, keyset) do valid_jwt
 │      "aud"            => "example-audience"
 ...
 └      "email"          => "user@example.com"
+```
+
+Both `validate!` and `with_valid_jwt` methods can optionally take an `algorithms` argument, which is a list of algorithms to validate against. If the JWT's algorithm is not in the list, the validation will fail.
+
+```julia
+julia> validate!(jwt, keyset, keyname; algorithms=["RS256"])
+true
 ```

@@ -152,16 +152,17 @@ show(io::IO, jwt::JWT) = print(io, issigned(jwt) ? join([jwt.header, jwt.payload
 Validate the JWT using the keys in the keyset.
 The JWT must be signed. An exception is thrown otherwise.
 The keyset must contain the key id from the JWT header. A KeyError is thrown otherwise.
+The optional `algorithms` parameter can be used to specify the algorithms to use for validation.
 
 Returns `true` if the JWT is valid, `false` otherwise.
 """
-validate!(jwt::JWT, keyset::JWKSet) = validate!(jwt, keyset, kid(jwt))
-function validate!(jwt::JWT, keyset::JWKSet, kid::String)
+validate!(jwt::JWT, keyset::JWKSet; algorithms::Vector{String}=String[]) = validate!(jwt, keyset, kid(jwt); algorithms=algorithms)
+function validate!(jwt::JWT, keyset::JWKSet, kid::String; algorithms::Vector{String}=String[])
     isverified(jwt) && (return isvalid(jwt))
     (kid in keys(keyset.keys)) || refresh!(keyset)
-    validate!(jwt, keyset.keys[kid])
+    validate!(jwt, keyset.keys[kid]; algorithms=algorithms)
 end
-function validate!(jwt::JWT, key::JWK)
+function validate!(jwt::JWT, key::JWK; algorithms::Vector{String}=String[])
     isverified(jwt) && (return isvalid(jwt))
     issigned(jwt) || throw(ArgumentError("jwt is not signed"))
 
@@ -169,10 +170,15 @@ function validate!(jwt::JWT, key::JWK)
     sigbytes = base64decode(urldec(jwt.signature))
 
     jwt.verified = true
-
     # Check that the (optional) `alg` header claim matches the algorithm of the validation key
     alg_jwt = alg(jwt)
     valid_alg = alg_jwt === nothing || alg_jwt == alg(key)
+    if !isempty(algorithms)
+        alg_matched = alg_jwt === nothing ? alg(key) : alg_jwt
+        if !(alg_matched in algorithms)
+            return false
+        end
+    end
     jwt.valid = valid_alg && if key isa JWKRSA
         try
             MbedTLS.verify(key.key, key.kind, MbedTLS.digest(key.kind, data), sigbytes) == 0
@@ -362,13 +368,22 @@ Arguments:
 
 Keyword arguments:
 - `kid`: The key id to use for validation. If not specified, the `kid` from the JWT header is used.
+- `algorithms`: Ensure validation with one of the listed algorithms. Not enforced by deault.
 """
-with_valid_jwt(f::Function, jwt::String, keyset::JWKSet; kid::Union{Nothing,String}=nothing) = with_valid_jwt(f, JWT(jwt), keyset; kid=kid)
-function with_valid_jwt(f::Function, jwt::JWT, keyset::JWKSet; kid::Union{Nothing,String}=nothing)
+function with_valid_jwt(f::Function, jwt::String, keyset::JWKSet;
+    kid::Union{Nothing,String}=nothing,
+    algorithms::Vector{String}=String[],
+)
+    with_valid_jwt(f, JWT(jwt), keyset; kid=kid, algorithms=algorithms)
+end
+function with_valid_jwt(f::Function, jwt::JWT, keyset::JWKSet;
+    kid::Union{Nothing,String}=nothing,
+    algorithms::Vector{String}=String[],
+)
     if isnothing(kid)
-        validate!(jwt, keyset)
+        validate!(jwt, keyset; algorithms=algorithms)
     else
-        validate!(jwt, keyset, kid)
+        validate!(jwt, keyset, kid; algorithms=algorithms)
     end
 
     isvalid(jwt) || throw(ArgumentError("invalid jwt"))

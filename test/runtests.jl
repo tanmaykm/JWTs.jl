@@ -70,7 +70,7 @@ function test_in_mem_keyset(template)
     end
 end
 
-function test_signing_keys(keyset, signingkeyset)
+function test_signing_keys(keyset, signingkeyset, algorithms::Vector{String})
     for k in keys(keyset.keys)
         for d in test_payload_data
             jwt = JWT(; payload=d)
@@ -97,7 +97,17 @@ function test_signing_keys(keyset, signingkeyset)
             @test issigned(jwt2)
             @test !isverified(jwt2)
             @test isvalid(jwt2) === nothing
-            @test validate!(jwt, keyset, k)
+            # test with valid algos
+            @test validate!(jwt, keyset, k; algorithms=algorithms)
+
+            # test with invalid algos
+            jwt_check = JWT(; jwt=string(jwt))
+            @test !validate!(jwt_check, keyset, k; algorithms=["invalidalgo"])
+
+            # test without specifying algos
+            jwt_check = JWT(; jwt=string(jwt))
+            @test validate!(jwt_check, keyset, k; algorithms=String[])
+
             @test issigned(jwt)
             @test isvalid(jwt)
             @test isverified(jwt)
@@ -111,7 +121,7 @@ function test_signing_keys(keyset, signingkeyset)
             @test !isverified(jwt2)
             @test isvalid(jwt2) === nothing
             invalidkey = findfirst(x -> x != keyset.keys[k], keyset.keys)
-            @test !validate!(jwt2, keyset, invalidkey)
+            @test !validate!(jwt2, keyset, invalidkey; algorithms=algorithms)
             @test issigned(jwt2)
             @test !isvalid(jwt2)
             @test isverified(jwt2)
@@ -119,7 +129,7 @@ function test_signing_keys(keyset, signingkeyset)
     end
 end
 
-function test_signing_asymmetric_keys(keyset_url)
+function test_signing_asymmetric_keys(keyset_url, algorithms::Vector{String})
     print_header("signing asymmetric keys")
     keyset = JWKSet(keyset_url)
     refresh!(keyset)
@@ -131,16 +141,16 @@ function test_signing_asymmetric_keys(keyset_url)
         end
         signingkeyset.keys[k] = JWKRSA(signingkeyset.keys[k].kind, MbedTLS.parse_keyfile(keyfile))
     end
-    test_signing_keys(keyset, signingkeyset)
+    test_signing_keys(keyset, signingkeyset, algorithms)
 end
 
-function test_signing_symmetric_keys(keyset_url)
+function test_signing_symmetric_keys(keyset_url, algorithms::Vector{String})
     print_header("signing symmetric keys")
     keyset = test_and_get_keyset(keyset_url)
-    test_signing_keys(keyset, keyset)
+    test_signing_keys(keyset, keyset, algorithms)
 end
 
-function test_with_valid_jwt(keyset_url)
+function test_with_valid_jwt(keyset_url, algorithms::Vector{String})
     print_header("with_valid_jwt do block")
 
     keyset = JWKSet(keyset_url)
@@ -151,7 +161,7 @@ function test_with_valid_jwt(keyset_url)
     key = first(keys(keyset.keys))
     sign!(jwt, keyset, key)
 
-    with_valid_jwt(jwt, keyset) do jwt3
+    with_valid_jwt(jwt, keyset; algorithms=algorithms) do jwt3
         @test isvalid(jwt3)
         @test claims(jwt3) == d
     end
@@ -167,24 +177,28 @@ function test_with_valid_jwt(keyset_url)
     end
 end
 
-test_and_get_keyset("https://www.googleapis.com/oauth2/v3/certs")
-test_signing_symmetric_keys("file://" * joinpath(@__DIR__, "keys", "oct", "jwkkey.json"))
-test_in_mem_keyset(joinpath(@__DIR__, "keys", "oct", "jwkkey.json"))
-test_signing_asymmetric_keys("file://" * joinpath(@__DIR__, "keys", "rsa", "jwkkey.json"))
-test_with_valid_jwt("file://" * joinpath(@__DIR__, "keys", "oct", "jwkkey.json"))
+@testset "JWTs" begin
+    @testset "signing" begin
+        test_and_get_keyset("https://www.googleapis.com/oauth2/v3/certs")
+        test_signing_symmetric_keys("file://" * joinpath(@__DIR__, "keys", "oct", "jwkkey.json"), ["HS256", "HS384", "HS512"])
+        test_in_mem_keyset(joinpath(@__DIR__, "keys", "oct", "jwkkey.json"))
+        test_signing_asymmetric_keys("file://" * joinpath(@__DIR__, "keys", "rsa", "jwkkey.json"), ["RS256"])
+        test_with_valid_jwt("file://" * joinpath(@__DIR__, "keys", "oct", "jwkkey.json"), ["HS256", "HS384", "HS512"])
+    end
 
-@testset "alg" begin
-    rsakey = MbedTLS.parse_keyfile(joinpath(@__DIR__, "keys", "rsa", "rsakey1.private.pem"))
-    @test JWTs.alg(JWKRSA(MbedTLS.MD_SHA256, rsakey)) == "RS256"
-    @test JWTs.alg(JWKRSA(MbedTLS.MD_SHA384, rsakey)) == "RS384"
-    @test JWTs.alg(JWKRSA(MbedTLS.MD_SHA, rsakey)) == "RS512"
+    @testset "alg" begin
+        rsakey = MbedTLS.parse_keyfile(joinpath(@__DIR__, "keys", "rsa", "rsakey1.private.pem"))
+        @test JWTs.alg(JWKRSA(MbedTLS.MD_SHA256, rsakey)) == "RS256"
+        @test JWTs.alg(JWKRSA(MbedTLS.MD_SHA384, rsakey)) == "RS384"
+        @test JWTs.alg(JWKRSA(MbedTLS.MD_SHA, rsakey)) == "RS512"
 
-    @test JWTs.alg(JWKSymmetric(MbedTLS.MD_SHA256, UInt8[])) == "HS256"
-    @test JWTs.alg(JWKSymmetric(MbedTLS.MD_SHA384, UInt8[])) == "HS384"
-    @test JWTs.alg(JWKSymmetric(MbedTLS.MD_SHA, UInt8[])) == "HS512"
+        @test JWTs.alg(JWKSymmetric(MbedTLS.MD_SHA256, UInt8[])) == "HS256"
+        @test JWTs.alg(JWKSymmetric(MbedTLS.MD_SHA384, UInt8[])) == "HS384"
+        @test JWTs.alg(JWKSymmetric(MbedTLS.MD_SHA, UInt8[])) == "HS512"
 
-    for kind in (MbedTLS.MD_SHA1, MbedTLS.MD_SHA224)
-        @test_throws ArgumentError JWTs.alg(JWKRSA(kind, rsakey))
-        @test_throws ArgumentError JWTs.alg(JWKSymmetric(kind, UInt8[]))
+        for kind in (MbedTLS.MD_SHA1, MbedTLS.MD_SHA224)
+            @test_throws ArgumentError JWTs.alg(JWKRSA(kind, rsakey))
+            @test_throws ArgumentError JWTs.alg(JWKSymmetric(kind, UInt8[]))
+        end
     end
 end
