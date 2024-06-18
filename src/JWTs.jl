@@ -109,7 +109,7 @@ isvalid(jwt::JWT) = jwt.valid
 
 Get the key id from the JWT header, or `nothing` if the `kid` parameter is not included in the JWT header.
 
-The JWT must be signed. An `ArgumentError` is thrown otherwise.
+The JWT must be signed. An exception is thrown otherwise.
 """
 function kid(jwt::JWT)::String
     issigned(jwt) || throw(ArgumentError("jwt is not signed"))
@@ -121,7 +121,7 @@ end
 
 Get the key algorithm from the JWT header, or `nothing` if the `alg` parameter is not included in the JWT header.
 
-The JWT must be signed. An `ArgumentError` is thrown otherwise.
+The JWT must be signed. An exception is thrown otherwise.
 """
 function alg(jwt::JWT)::String
     issigned(jwt) || throw(ArgumentError("jwt is not signed"))
@@ -150,7 +150,7 @@ show(io::IO, jwt::JWT) = print(io, issigned(jwt) ? join([jwt.header, jwt.payload
     validate!(jwt, keyset)
 
 Validate the JWT using the keys in the keyset.
-The JWT must be signed. An `ArgumentError` is thrown otherwise.
+The JWT must be signed. An exception is thrown otherwise.
 The keyset must contain the key id from the JWT header. A KeyError is thrown otherwise.
 
 Returns `true` if the JWT is valid, `false` otherwise.
