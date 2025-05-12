@@ -15,7 +15,7 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [compat]
 Downloads = "1"
-JSON = "0.20, 0.21"
+JSON = "0.20, 0.21, 1"
 MbedTLS = "0.6.8, 0.7, 1"
 julia = "1.3"
 
